@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -78,7 +79,7 @@ def main(args):
       frame_name = os.path.basename(frame)
       out_name = f'{cell_type}-{seq}-{frame_name}'
       try:
-        os.symlink(frame, os.path.join(images_dir, out_name))
+        shutil.copy(frame, os.path.join(images_dir, out_name))
       except FileExistsError:
         pass
 

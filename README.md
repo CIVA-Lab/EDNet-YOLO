@@ -44,7 +44,7 @@ $ python predict.py --data_root_dir data/CTMCV1/test \
 This part will split the training data into train/val splits in the format in
 which this implementation of YOLOv3 is trained using the command:
 ```bash
-$ python data_prep.py -i ~/scratch/data/CTMCV1/train -o data/CTMC-prepped 
+$ python data_prep.py -i data/CTMCV1/train -o data/CTMC-prepped 
 ```
 The downloaded data should be in the format:
 ```
@@ -74,6 +74,13 @@ data/CTMC-prepped
   classes.names
   data.data
 ```
+### Load ImageNet weights (Optional)
+Download weights for backbone network:
+```bash
+$ wget -c "https://pjreddie.com/media/files/darknet53.conv.74" \
+  --header "Referer: pjreddie.com" \
+  --output-document weights/darknet53.conv.74
+```
 ### Train the model
 
 For argument descriptions have a look at `yolo-train --help`
@@ -88,7 +95,7 @@ $ yolo-train \
     --checkpoint_interval 20 \
     --evaluation_interval 1 \
     --checkpoint_path checkpoints \
-    --logdir logs/$1 \
+    --logdir logs/ctmc \
     --n_cpu 32
 ```
 
