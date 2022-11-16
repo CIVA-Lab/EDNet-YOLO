@@ -8,6 +8,7 @@ This repository is based on the PyTorch implementation of YOLOv3 from
 [eriklindernoren](https://github.com/eriklindernoren)
 ```bash
 $ pip install git+https://github.com/CIVA-Lab/Ensemble-Detection-YOLOv3.git
+$ pip install -r requirements.txt
 ```
 ## Download pretrained weights
 
@@ -15,24 +16,35 @@ CTMC pretrained weights can be downloaded from this Google Drive link.
 Alternatively, you can use the `gdown` python cli package:
 ```bash
 $ pip install gdown
-$ gdown 1wxeHj2UuiJ33oHnBDUE07OmG91gWhYs8 -O weights/weights.zip
+$ gdown 1ZI31NXaKWTSpq_ToLh_osO0qpjOiwvCB -O weights/weights.zip
 $ unzip weights/weights.zip -d weights
+$ rm weights/weights.zip # (Optional)
 ```
 
 ## Download CTMCv1 [2] dataset
 ```bash
 $ curl 'https://motchallenge.net/data/CTMCV1.zip' -L -o 'CTMCV1.zip'
 $ unzip 'CTMCV1.zip' -d data
+$ rm 'CTMCV1.zip'
 ```
 
 ## Inference
+To run inference, use the `predict.py` script. You can use the `--help` flag to
+get a list of all available options. Below is an example
+```bash
+$ python predict.py --data_root_dir data/CTMCV1/test \
+  --sequences 3T3-run02 3T3-run04 3T3-run06 3T3-run08 \
+  --model_config_path cfg/yolov3.cfg \
+  --model_ckpt_dir weights/edf \
+  --output_dir output 
+```
 
 ## Training
 ### Preprocess the data for YOLOv3 training
 This part will split the training data into train/val splits in the format in
 which this implementation of YOLOv3 is trained using the command:
 ```bash
-python data_prep.py -i ~/scratch/data/CTMCV1/train -o data/CTMC-prepped 
+$ python data_prep.py -i ~/scratch/data/CTMCV1/train -o data/CTMC-prepped 
 ```
 The downloaded data should be in the format:
 ```
@@ -87,7 +99,7 @@ Track training progress in Tensorboard:
 * Go to http://localhost:6006/
 
 ```bash
-poetry run tensorboard --logdir='logs' --port=6006
+$ tensorboard --logdir='logs' --port=6006
 ```
 
 Storing the logs on a slow drive possibly leads to a significant training speed
