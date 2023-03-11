@@ -1,2 +1,4 @@
 *.pth
 darknet53.conv.74
+*.zip
+*.weights

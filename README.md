@@ -1,6 +1,5 @@
-# Ensemble PyTorch-YOLOv3
-An implementation of Ensemble-YOLOv3 from: I.E. Toubal et al., 2022 "Ensemble 
-Deep Learning Methods for Cell Detection and Tracking"
+# Ensemble PyTorch-YOLO
+An implementation of Ensemble-YOLO from: I.E. Toubal et al., 2023 "Ensemble Deep Learning Approach for Cell Mitosis Detection, Tracking and Lineage"
 
 ## Installation
 
@@ -81,6 +80,16 @@ $ wget -c "https://pjreddie.com/media/files/darknet53.conv.74" \
   --header "Referer: pjreddie.com" \
   --output-document weights/darknet53.conv.74
 ```
+
+Configs and initialization weights (pretrained on COCO) for different architectures of YOLO are listed below:
+
+| Architecture | Config                         | Weights                      |
+| ------------ | ------                         | -------                      |
+| YOLOv3       | [config/yolov3](condig/yolov3) | https://pjreddie.com/media/files/darknet53.conv.74 |
+| YOLOv4       | [config/yolov4](condig/yolov4) | https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov7.weights |
+| YOLOv7       | [condig/yolov4](condig/yolov4) | https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov4.weights |
+
+You can find more YOLO architecture configs and weights in [this repo](https://github.com/AlexeyAB/darknet) [4].
 ### Train the model
 
 For argument descriptions have a look at `yolo-train --help`
@@ -91,6 +100,7 @@ To train on CTMC using a Darknet-53 backend pretrained on ImageNet run:
 ```bash
 $ yolo-train \
     --data data/CTMC-prepped/data.data \
+    --model config/yolov4.cfg \
     --pretrained_weights weights/darknet53.conv.74 \
     --checkpoint_interval 20 \
     --evaluation_interval 1 \
@@ -127,12 +137,15 @@ You can adjust the log directory using `--logdir <path>` when running
 - [3] Redmon, J., & Farhadi, A. (2018). Yolov3: An incremental improvement. arXiv 
     preprint arXiv:1804.02767.
 
+- [4] Bochkovskiy A., Wang C., & Liao H.M., YOLOv4: Optimal Speed and Accuracy of Object Detection. arXiv 
+    preprint arXiv:2004.10934.
+
 ## Cite this paper
 ```
-@article{toubal2022ensemble,
-  title={Ensemble Deep Learning Methods for Cell Detection and Tracking},
-  author={Toubal, Imad Eddine and Alshakarji, Noor and Palaniappan, K.},
+@article{toubal2023ensemble,
+  title={Ensemble Deep Learning Approach for Cell Mitosis Detection, Tracking and Lineage},
+  author={Toubal, Imad Eddine and Alshakarji, Noor and Cornelison, D. and Palaniappan, K.},
   submitted={OJEMB},
-  year={2022}
+  year={2023}
 }
 ```

@@ -9,6 +9,9 @@ import tqdm
 from sklearn.model_selection import train_test_split
 
 
+ALL_CELL_TYPES = ['3T3', 'A-10', 'A-549', 'APM', 'BPAE', 'CRE-BAG2', 'CV-1',
+                  'LLC-MK2', 'MDBK', 'MDOK', 'OK', 'PL1Ut', 'RK-13', 'U2O-S']
+
 def bbox_to_yolo(bbox, w, h):
   """Converts bounding boxes to the YOLO format:
   [x1, y1, w, h, ...] => [cx, cy, w, h]
@@ -78,10 +81,8 @@ def main(args):
     for frame in glob.glob(images_pattern):
       frame_name = os.path.basename(frame)
       out_name = f'{cell_type}-{seq}-{frame_name}'
-      try:
+      if not os.path.isfile(os.path.join(images_dir, out_name)):
         shutil.copy(frame, os.path.join(images_dir, out_name))
-      except FileExistsError:
-        pass
 
     # 2. Convert bbox format to YOLO format.
     bboxes = np.loadtxt(os.path.join(
@@ -90,11 +91,12 @@ def main(args):
     boxes = bboxes[:, 1:6]
     boxes[:, 0] = 0
     for i in range(1, seq_length + 1):
-      frame_boxes = boxes[frames == i]
-      frame_boxes = bbox_to_yolo(frame_boxes, w, h)
       out_path = os.path.join(
           labels_dir, f'{cell_type}-{seq}-{i:06d}.txt')
-
+      if os.path.isfile(out_path):
+        break
+      frame_boxes = boxes[frames == i]
+      frame_boxes = bbox_to_yolo(frame_boxes, w, h)
       df = pd.DataFrame(frame_boxes, columns=['class', 'x', 'y', 'w', 'h'])
       df = df.astype({'class': 'int'})
 
@@ -102,33 +104,38 @@ def main(args):
 
   # 3. Create train.txt and val.txt files.
   image_files = glob.glob(os.path.join(images_dir, f'*{ext}'))
-  train_files, valid_files = sample(image_files, args.sampling_strategy)
+  datasets_dict = sample(image_files, args.sampling_strategy,
+                         val_cell_type=args.validation_cell_type)
+  for prefix, (train_files, valid_files) in datasets_dict.items():
+    if len(prefix):
+      prefix += '-'
 
-  train_txt = os.path.join(args.target_dir, 'train.txt')
-  val_txt = os.path.join(args.target_dir, 'val.txt')
-  classes_names = os.path.join(args.target_dir, 'classes.names')
+    train_txt = os.path.join(args.target_dir, f'{prefix}train.txt')
+    val_txt = os.path.join(args.target_dir, f'{prefix}val.txt')
+    classes_names = os.path.join(args.target_dir, 'classes.names')
 
-  with open(train_txt, 'w') as f:
-    print(f'Writing {train_txt}')
-    f.writelines([f + '\n' for f in train_files])
+    with open(train_txt, 'w') as f:
+      print(f'Writing {train_txt}')
+      f.writelines([f + '\n' for f in train_files])
 
-  with open(val_txt, 'w') as f:
-    print(f'Writing {val_txt}')
-    f.writelines([f + '\n' for f in valid_files])
+    with open(val_txt, 'w') as f:
+      print(f'Writing {val_txt}')
+      f.writelines([f + '\n' for f in valid_files])
 
-  # This file is used for multi-class detection, we don't care for it but
-  # it needs to be provided for training.
-  with open(classes_names, 'w') as f:
-    print(f'Writing {classes_names}')
-    f.writelines(['cell'])
+    # This file is used for multi-class detection, we don't care for it but
+    # it needs to be provided for training.
+    with open(classes_names, 'w') as f:
+      print(f'Writing {classes_names}')
+      f.writelines(['cell'])
 
-  # 4. Finally, put it all together in a .data file:
-  with open(os.path.join(args.target_dir, 'data.data'), 'w') as f:
-    print(f'Writing {args.target_dir}/data.data')
-    f.write(f'classes={1}\n')
-    f.write(f'train={train_txt}\n')
-    f.write(f'valid={val_txt}\n')
-    f.write(f'names={classes_names}\n')
+    # 4. Finally, put it all together in a .data file:
+    data_file_name = os.path.join(args.target_dir, f'{prefix}data.data')
+    with open(data_file_name, 'w') as f:
+      print(f'Writing {data_file_name}')
+      f.write(f'classes={1}\n')
+      f.write(f'train={train_txt}\n')
+      f.write(f'valid={val_txt}\n')
+      f.write(f'names={classes_names}\n')
 
 
 def sample(all_files, strategy, valid_size=0.2, val_cell_type='3T3'):
@@ -156,21 +163,27 @@ def sample(all_files, strategy, valid_size=0.2, val_cell_type='3T3'):
   print(strategy)
   assert strategy in ['random_sampling', 'leave_one_cell_type_out',
                       'leave_one_sequence_out']
-
+  ret = {}
   if strategy == 'random_sampling':
     train_files, valid_files = train_test_split(
         all_files, test_size=valid_size)
+    ret[''] = train_files, valid_files
   elif strategy == 'leave_one_cell_type_out':
-    train_files = [f for f in all_files if val_cell_type not in f]
-    valid_files = [f for f in all_files if val_cell_type in f]
+    if val_cell_type == 'all':
+      ctypes = ALL_CELL_TYPES
+    else:
+      ctypes = [val_cell_type]
+    for ctype in ctypes:
+      train_files = [f for f in all_files if ctype not in f]
+      valid_files = [f for f in all_files if ctype in f]
+      ret[ctype] = (train_files, valid_files)
   elif strategy == 'leave_one_sequence_out':
     # Sequence 01 will be removed from training
     train_files = [
-        f for f in all_files if '-01-' not in os.path.basename(f)]
-    valid_files = [f for f in all_files if '-01-' in os.path.basename(f)]
-  else:
-    raise ValueError('Unknown sampling strategy')
-  return train_files, valid_files
+        f for f in all_files if '-run01' not in os.path.basename(f)]
+    valid_files = [f for f in all_files if '-run01' in os.path.basename(f)]
+    ret[''] = train_files, valid_files
+  return ret
 
 
 if __name__ == '__main__':
@@ -185,5 +198,9 @@ if __name__ == '__main__':
                                'leave_one_sequence_out'],
                       default='leave_one_cell_type_out',
                       help='Sampling strategy for train/val split.')
-
+  parser.add_argument('-v', '--validation_cell_type', type=str,
+                      choices=[*ALL_CELL_TYPES, 'all'],
+                      default='all',
+                      help=('Cell type to be held-out for validation when '
+                            '`sampling_strategy` is `leave_one_cell_type_out`'))
   main(parser.parse_args())
