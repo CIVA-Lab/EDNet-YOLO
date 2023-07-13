@@ -1,4 +1,4 @@
-# Ensemble PyTorch-YOLO
+# EDNet Ensemble PyTorch-YOLO
 An implementation of Ensemble-YOLO from: I.E. Toubal et al., 2023 "Ensemble Deep Learning Approach for Cell Mitosis Detection, Tracking and Lineage"
 
 ## Installation
